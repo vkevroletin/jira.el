@@ -4,12 +4,18 @@
 (require 'f)
 (require 'dash)
 
-(setq request-backend 'url-retrieve)
-
 (defcustom jira-base-url "https://jira.rhonda.ru"
   "Url like https://jira.rhonda.ru"
   :group 'restclient
   :type 'string)
+
+(defun jira--at (keys alist)
+  (if (not (consp keys))
+      (cdr (assoc keys alist))
+    (-let (((x . xs) keys))
+      (if xs
+          (jira--at xs (cdr (assoc x alist)))
+        (cdr (assoc x alist))))))
 
 (defun jira--rest-url (x)
   (format "%s/rest/api/latest/%s" jira-base-url x))
@@ -64,41 +70,10 @@ buffer."
         (url-request-data (if body-params (json-encode body-params) '())))
     (jira--run-url-retreive (jira--rest-url mini-url) callback)))
 
-;;
-;; SCRATCH
-;;
-
-(defun example-01 ()
-  (jira-get "issue/RH-512"
-            (lambda (x)
-              (pp x)
-              (f-write-text (json-encode x) 'utf-8 "data.txt"))
-            '(("filter" . "12953"))))
-
-(defun exapmle-02 ()
-  (jira-post "search"
-             (lambda (x)
-               (pp x)
-               (f-write-text (json-encode x) 'utf-8 "data.txt"))
-             '(("jql" . "project = \"Rhonda Internal\" AND \"Project Name\" = Automation AND status not in (closed, resolved) ORDER BY cf[10802] ASC, cf[10102] ASC, priority DESC, key ASC"))))
-
-(defun example-03 ()
-  (setq data (f-read-text "data.txt"))
-  (setq obj
-        (let ((json-object-type 'alist)
-              (json-array-type 'vector))
-          (json-read-from-string data)))
-
-  (defun jira--minify-jira (x)
-    (list "key" (alist-get x "key")))
-
-  (mapcar #'jira--minify-jira data)
-
-  (defun dp (data)
-    (let ((buffer (get-buffer-create "dbd"))
-          (json-encoding-pretty-print t))
-      (with-current-buffer buffer
-        (erase-buffer)
-        (insert (json-encode data))
-        (switch-to-buffer buffer)
-        ))))
+(defun jira--minify-jira (x)
+  `(,(assoc 'key x)
+    (labels      ,(jira--at '(fields labels) x))
+    (project     ,(jira--at '(fields project name) x))
+    (project_key ,(jira--at '(fields project key) x))
+    (issue_type  ,(jira--at '(fields issuetype name) x))
+    (summary     ,(jira--at '(fields summary) x))))
