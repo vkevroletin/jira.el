@@ -6,9 +6,19 @@
 (require 'lifted)
 (require 'restclient)
 
-(defcustom jira-base-url "https://jira.rhonda.ru"
-  "Url like https://jira.rhonda.ru"
-  :group 'restclient
+(defcustom jira-base-url "https://jira.com"
+  "Url like https://jira.com"
+  :group 'jira
+  :type 'string)
+
+(defcustom jira--debug-save-response-to-file '()
+  "Path to file"
+  :group 'jira
+  :type 'string)
+
+(defcustom jira--debug-read-response-from-file '()
+  "Path to file"
+  :group 'jira
   :type 'string)
 
 (defun jira--at-helper (key data)
@@ -59,6 +69,10 @@
              (json-array-type 'vector))
         (json-read)))))
 
+(defun jira--maybe-dump-responce (result)
+  (when jira--debug-save-response-to-file
+    (f-write-text (json-encode result) 'utf-8 jira--debug-save-response-to-file)))
+
 (defun jira--add-parsing-to-callback (callback)
   (lambda (status)
     (-when-let (err (plist-get status :error))
@@ -66,10 +80,15 @@
       (let ((first-line (buffer-substring-no-properties (line-beginning-position)
                                                         (line-end-position))))
         (signal (car err) (list first-line))))
-    (funcall callback
-             (jira--parse-http-response-to-json (current-buffer)))))
+    (let ((res (jira--parse-http-response-to-json (current-buffer))))
+      (jira--maybe-dump-responce res)
+      (funcall callback res))))
 
-(defun jira--retrieve-common (method mini-url callback &optional params)
+(defun jira--retrieve-common-debug (method mini-url callback &optional params)
+  (funcall callback
+           (json-read-from-string (f-read-text jira--debug-read-response-from-file))))
+
+(defun jira--retrieve-common-normal (method mini-url callback &optional params)
   (let ((url-request-method method)
         (url-request-extra-headers (jira--headers))
         (url-request-data '())
@@ -81,6 +100,11 @@
       (setq full-url (jira--rest-url mini-url)))
 
     (url-retrieve full-url (jira--add-parsing-to-callback callback))))
+
+(defun jira--retrieve-common (method mini-url callback &optional params)
+  (if jira--debug-read-response-from-file
+      (jira--retrieve-common-debug method mini-url callback params)
+    (jira--retrieve-common-normal method mini-url callback params)))
 
 (defun jira-get (mini-url callback &optional params)
   "Retrieves data from jira asynchronously using GET request.
