@@ -11,13 +11,20 @@
   :group 'restclient
   :type 'string)
 
-(defun jira--at (keys alist)
+(defun jira--at-helper (key data)
+  (if (numberp key)
+      (if (>= (length data) key)
+          '()
+        (elt data key))
+    (cdr (assoc key data))))
+
+(defun jira--at (keys data)
   (if (not (consp keys))
-      (cdr (assoc keys alist))
+      (jira--at-helper keys data)
     (-let (((x . xs) keys))
       (if xs
-          (jira--at xs (cdr (assoc x alist)))
-        (cdr (assoc x alist))))))
+          (jira--at xs (jira--at-helper x data))
+        (jira--at-helper x data)))))
 
 (defun jira--rest-url (x)
   (format "%s/rest/api/latest/%s" jira-base-url x))
