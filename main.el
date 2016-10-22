@@ -39,6 +39,9 @@
 (defun jira--rest-url (x)
   (format "%s/rest/api/latest/%s" jira-base-url x))
 
+(defun jira--issue-browse-url (key)
+  (format "%s/browse/%s" jira-base-url key))
+
 (defun jira--headers ()
   `(("Authntication" . ,(concat "Basic " (user-config/get-jira-secret)))
     ("Content-type" . "application/json")))
@@ -136,6 +139,7 @@ buffer."
                 params))))
 
 (defun jira-jql-filter-signal (jql)
+  "Sequence of mini-issues"
   (lifted:map
    #'jira--minify-jira-list
    (jira-post-signal "search" `(("jql" . ,jql)))))
@@ -144,14 +148,23 @@ buffer."
   (-map #'jira--minify-jira (jira--at 'issues xs)))
 
 (defun jira--minify-jira (x)
-  `(,(assoc 'key x)
-    (labels      ,(jira--at '(fields labels) x))
-    (project     ,(jira--at '(fields project name) x))
-    (project_key ,(jira--at '(fields project key) x))
-    (issue_type  ,(jira--at '(fields issuetype name) x))
-    (summary     ,(jira--at '(fields summary) x))))
+  "Let call result 'issue' which is simplified representation of jira"
+  (list
+   (assoc 'key x)
+   (cons 'labels      (jira--at '(fields labels) x))
+   (cons 'project     (jira--at '(fields project name) x))
+   (cons 'project_key (jira--at '(fields project key) x))
+   (cons 'issue_type  (jira--at '(fields issuetype name) x))
+   (cons 'summary     (jira--at '(fields summary) x))))
 
-(defun jira--mini-jira-to-org-task (x)
-  (s-join "\n"
-          (list
-           (format "* MAYBE %s" (jira--at 'summary x)))))
+(defun jira--issue-caption (issue)
+  (format "[[%s][%s]]"
+          (jira--issue-browse-url (jira--at 'key issue))
+          (s-replace-all '(("[" . "{") ("]" . "}")) (jira--at 'summary issue))))
+
+(defun jira--issue-to-org-task (x)
+  (s-join
+   "\n"
+   (list
+    (concat "* MAYBE " (jira--issue-caption x)))))
+
