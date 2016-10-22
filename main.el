@@ -11,6 +11,18 @@
   :group 'jira
   :type 'string)
 
+(defcustom jira-my-issues-jql
+  "assignee=currentUser() and resolution=unresolved and \"Landing Zone\" is not empty"
+  "JQL used by *my-issues* functions"
+  :group 'jira
+  :type 'string)
+
+(defcustom jira-pending-request-placeholder "{jira-pending-request}"
+  "This string is inserted into buffer till end of asynchronous
+retrieving of data."
+  :group 'jira
+  :type 'string)
+
 (defcustom jira--debug-save-response-to-file '()
   "Path to file"
   :group 'jira
@@ -168,3 +180,47 @@ buffer."
    (list
     (concat "* MAYBE " (jira--issue-caption x)))))
 
+(defun jira--find-issue-in-buffer (issue buffer)
+  (let ((pattern (format "*+ \\w+ %s" (regexp-quote (jira--issue-caption issue)))))
+    (save-excursion
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (when (re-search-forward pattern '() t) ;; suppress error
+          t)))))
+
+(defun jira--my-issues-signal ()
+  (jira-jql-filter-signal jira-my-issues-jql))
+
+(defun jira--kill-line ()
+  "Kill line without kill ring"
+  (let ((beg (point)))
+    (forward-line 1)
+    (delete-region beg (point))))
+
+(defun jira-insert-my-issues-here ()
+  "This function could be described as jira--my-issues-signal =>
+insert each issue. Tricky moment is asynchronous nature of data
+retrieval. Instead of blocking we remember where to place result:
+we insert magic string in this where user called us so user can
+delete magic string to 'cancel' operation."
+  (interactive)
+  (goto-char (line-beginning-position))
+  (insert (format "%s\n\n" jira-pending-request-placeholder))
+  (forward-line -2)
+  (let ((buffer (current-buffer))
+        (placeholder-position (point)))
+    (funcall (jira--my-issues-signal)
+             :subscribe-next
+             (lambda (xs)
+               (with-current-buffer buffer
+                 (save-excursion
+                   (goto-char placeholder-position)
+                   (when (looking-at (regexp-quote jira-pending-request-placeholder))
+                     (jira--kill-line)
+                     (--each xs
+                       (unless (jira--find-issue-in-buffer it (current-buffer))
+                         (insert (jira--issue-to-org-task it))
+                         (insert "\n\n")))
+                     (jira--kill-line))
+                   (message "Done")))
+               (goto-char placeholder-position)))))
