@@ -3,6 +3,8 @@
 (require 'json)
 (require 'f)
 (require 'dash)
+(require 'lifted)
+(require 'restclient)
 
 (defcustom jira-base-url "https://jira.rhonda.ru"
   "Url like https://jira.rhonda.ru"
@@ -80,6 +82,13 @@ elisp alists and vectors. Gives no guarantees about about saving
 excursion and current buffer."
   (jira--retrieve-common "GET" mini-url callback params))
 
+(defun jira-get-signal (mini-url &optional params)
+  (lifted:signal
+   (lambda (subscriber)
+     (jira-get mini-url
+               (lambda (x) (funcall subscriber :send-next x))
+               params))))
+
 (defun jira-post (mini-url callback &optional body-params)
   "Retrieves data from jira asynchronously using POST request.
 Calls callback only in case of success with json parsed into
@@ -88,6 +97,21 @@ Gives no guarantees about about saving excursion and current
 buffer."
   (jira--retrieve-common "POST" mini-url callback body-params))
 
+(defun jira-post-signal (mini-url &optional params)
+  (lifted:signal
+   (lambda (subscriber)
+     (jira-post mini-url
+                (lambda (x) (funcall subscriber :send-next x))
+                params))))
+
+(defun jira-jql-filter-signal (jql)
+  (lifted:map
+   #'jira--minify-jira-list
+   (jira-post-signal "search" `(("jql" . ,jql)))))
+
+(defun jira--minify-jira-list (xs)
+  (-map #'jira--minify-jira (jira--at 'issues xs)))
+
 (defun jira--minify-jira (x)
   `(,(assoc 'key x)
     (labels      ,(jira--at '(fields labels) x))
@@ -95,3 +119,8 @@ buffer."
     (project_key ,(jira--at '(fields project key) x))
     (issue_type  ,(jira--at '(fields issuetype name) x))
     (summary     ,(jira--at '(fields summary) x))))
+
+(defun jira--mini-jira-to-org-task (x)
+  (s-join "\n"
+          (list
+           (format "* MAYBE %s" (jira--at 'summary x)))))
