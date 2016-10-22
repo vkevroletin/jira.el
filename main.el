@@ -34,30 +34,51 @@
           (concat (jira--rest-url mini-url) sep (jira--encode-get-params params)))
     (jira--rest-url mini-url)))
 
-(defun jira--run-url-retreive(full-url callback &optional body-params)
-  (url-retrieve full-url
-                (lambda (status)
-                  (goto-char (point-min))
-                  (-when-let (err (plist-get status :error))
-                    (let ((first-line (buffer-substring-no-properties (line-beginning-position)
-                                                                      (line-end-position))))
-                      (signal (car err) (list first-line))))
-                  ;; Skip headers
-                  (forward-paragraph)
-                  ;; Parse rest of buffer as json
-                  (let* ((json-object-type 'alist)
-                         (json-array-type 'vector)
-                         (js (json-read)))
-                    (funcall callback js)))))
+(defun jira--parse-http-response-to-json (buffer)
+  "Maps buffer -> json"
+  ;; This is tricky moment: url-retreive doesn't detect utf-8 response
+  ;; automatically (emacs shows characters as \342\240... So we "reuse"
+  ;; restclient-decode-response to get utf-8 buffer
+  (with-current-buffer
+      (restclient-decode-response buffer (get-buffer-create "*jira-data*") t)
+    (progn
+      (goto-char (point-min))
+      ;; Skip headers
+      (re-search-forward "^$")
+      ;; Parse rest of buffer as json
+      (let* ((json-object-type 'alist)
+             (json-array-type 'vector))
+        (json-read)))))
+
+(defun jira--add-parsing-to-callback (callback)
+  (lambda (status)
+    (-when-let (err (plist-get status :error))
+      (goto-char (point-min))
+      (let ((first-line (buffer-substring-no-properties (line-beginning-position)
+                                                        (line-end-position))))
+        (signal (car err) (list first-line))))
+    (funcall callback
+             (jira--parse-http-response-to-json (current-buffer)))))
+
+(defun jira--retrieve-common (method mini-url callback &optional params)
+  (let ((url-request-method method)
+        (url-request-extra-headers (jira--headers))
+        (url-request-data '())
+        (full-url '()))
+    (when (and (equal method "POST") params)
+      (setq url-request-data (json-encode params)))
+    (if (equal method "GET")
+        (setq full-url (jira--rest-url-with-get-params mini-url params))
+      (setq full-url (jira--rest-url mini-url)))
+
+    (url-retrieve full-url (jira--add-parsing-to-callback callback))))
 
 (defun jira-get (mini-url callback &optional params)
   "Retrieves data from jira asynchronously using GET request.
 Calls callback only in case of success with json parsed into
 elisp alists and vectors. Gives no guarantees about about saving
 excursion and current buffer."
-  (let ((url-request-method "GET")
-        (url-request-extra-headers (jira--headers)))
-    (jira--run-url-retreive (jira--rest-url-with-get-params mini-url params) callback)))
+  (jira--retrieve-common "GET" mini-url callback params))
 
 (defun jira-post (mini-url callback &optional body-params)
   "Retrieves data from jira asynchronously using POST request.
@@ -65,10 +86,7 @@ Calls callback only in case of success with json parsed into
 elisp alists and vectors. body-params are encoded into json.
 Gives no guarantees about about saving excursion and current
 buffer."
-  (let ((url-request-method "POST")
-        (url-request-extra-headers (jira--headers))
-        (url-request-data (if body-params (json-encode body-params) '())))
-    (jira--run-url-retreive (jira--rest-url mini-url) callback)))
+  (jira--retrieve-common "POST" mini-url callback body-params))
 
 (defun jira--minify-jira (x)
   `(,(assoc 'key x)
