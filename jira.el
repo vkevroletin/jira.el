@@ -53,7 +53,7 @@ retrieving of data."
   :type 'string)
 
 (defun jira--domain ()
-  (nth 1 (s-split "://" jira-base-url)))
+  (-first-item (s-split "/" (-last-item (s-split "://" jira-base-url)))))
 
 (defun jira--read-secret ()
   (let* ((auth (nth 0 (auth-source-search :host (jira--domain)
@@ -77,8 +77,13 @@ retrieving of data."
           (jira--at xs (jira--at-helper x data))
         (jira--at-helper x data)))))
 
+(defun jira--truncate-url-path (x)
+  (-if-let (((from . to)) (s-matched-positions-all "[^:\/]\/" x))
+      (s-left (+ 1 from) x)
+    x))
+
 (defun jira--rest-url (x)
-  (format "%s/rest/api/latest/%s" jira-base-url x))
+  (format "%s/rest/api/latest/%s" (jira--truncate-url-path jira-base-url) x))
 
 (defun jira--issue-browse-url (key)
   (format "%s/browse/%s" jira-base-url key))
