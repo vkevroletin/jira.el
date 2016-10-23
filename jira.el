@@ -64,7 +64,7 @@ retrieving of data."
 
 (defun jira--at-helper (key data)
   (if (numberp key)
-      (if (>= (length data) key)
+      (if (<= (length data) key)
           '()
         (elt data key))
     (cdr (assoc key data))))
