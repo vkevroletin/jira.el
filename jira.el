@@ -1,5 +1,4 @@
-;; -*- lexical-binding: t -*-
-;;; jira.el --- A library to retrieve tasks from jira into text files
+;;; jira.el --- A library to retrieve tasks from jira into text files -*- lexical-binding: t; -*-
 ;;
 ;; Public domain.
 
