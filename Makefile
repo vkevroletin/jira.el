@@ -12,9 +12,6 @@ test: clean-elc
 unit:
 	${CASK} exec ert-runner
 
-docs:
-	${CASK} exec ${EMACS} -Q --script bin/docs.el
-
 compile:
 	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile jira.el
 
