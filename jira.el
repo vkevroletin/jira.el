@@ -1,4 +1,23 @@
 ;; -*- lexical-binding: t -*-
+;;; jira.el --- A library to retrieve tasks from jira into text files
+;;
+;; Public domain.
+
+;; Author: Vasiliy Kevroletin <kevroletin@gmail.com>
+;; Maintainer: Vasiliy Kevroletin <kevroletin@gmail.com>
+;; Keywords: jira
+;; Package-Version: 0
+
+;; This file is not part of GNU Emacs.
+;; This file is public domain software. Do what you want.
+
+;;; Commentary:
+;;
+;; This is unfinished work. Probably it will evolve into something useful.
+
+;;; Code:
+;;
+
 (require 'request)
 (require 'json)
 (require 'f)
@@ -224,3 +243,7 @@ delete magic string to 'cancel' operation."
                      (jira--kill-line))
                    (message "Done")))
                (goto-char placeholder-position)))))
+
+(provide 'jira)
+
+;;; jira.el ends here
