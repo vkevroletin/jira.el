@@ -238,7 +238,7 @@ buffer."
           (jira--issue-browse-url (jira--at 'key issue))
           (s-replace-all '(("[" . "{") ("]" . "}")) (jira--at 'summary issue))))
 
-(defun jira--issue-to-org-task (x)
+(defun jira--issue-to-org-text (x)
   (s-join
    "\n"
    (list
@@ -273,6 +273,22 @@ buffer."
     (forward-line 1)
     (delete-region beg (point))))
 
+(defun jira--insert-jiras-main-part (issues-list)
+  "Inserts text representation at point in current buffer.
+Returns count of inserted and filtered tasks as cons."
+  (let ((good-cnt 0)
+        (bad-cnt  0))
+    (-each issues-list
+        (lambda (issue)
+          (if (jira--find-issue-in-buffer-and-files issue (current-buffer))
+              (incf bad-cnt)
+            (when (> good-cnt 0) (insert "\n"))
+            (incf good-cnt)
+            (insert (jira--issue-to-org-text issue)))))
+    (message "Done (inserted %s%s)"
+             good-cnt
+             (if (> bad-cnt 0) (format "; skipped %s" bad-cnt) ""))))
+
 (defun jira--insert-jiras (filter-signal)
   "This function could be described using pseudo code: signal
 provides issues => insert each issue into current pos. Tricky
@@ -287,18 +303,12 @@ User can remove magic string to cancel operation."
         (placeholder-position (point)))
     (funcall filter-signal
              :subscribe-next
-             (lambda (xs)
+             (lambda (issues)
                (with-current-buffer buffer
                  (save-excursion
                    (goto-char placeholder-position)
-                   (when (looking-at (regexp-quote jira-pending-request-placeholder))
-                     (jira--kill-line)
-                     (--each xs
-                       (unless (jira--find-issue-in-buffer-and-files it (current-buffer))
-                         (insert (jira--issue-to-org-task it))
-                         (insert "\n\n")))
-                     (jira--kill-line))
-                   (message "Done")))
+                   (jira--kill-line)
+                   (jira--insert-jiras-main-part issues)))
                (goto-char placeholder-position)))))
 
 (defun jira--filters-helm-sources ()
