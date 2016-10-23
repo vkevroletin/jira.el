@@ -236,11 +236,12 @@ buffer."
     (delete-region beg (point))))
 
 (defun jira-insert-my-issues-here ()
-  "This function could be described as jira--my-issues-signal =>
-insert each issue. Tricky moment is asynchronous nature of data
-retrieval. Instead of blocking we remember where to place result:
-we insert magic string in this where user called us so user can
-delete magic string to 'cancel' operation."
+  "This function could be described using pseudo code:
+fetch-my-issues => insert each issue into current pos. Tricky
+moment is asynchronous nature of data retrieval. Instead of
+blocking we remember where to place result. We mark this place in
+buffer by magic string. Later magic string is replaced by result.
+User can remove magic string to cancel operation"
   (interactive)
   (goto-char (line-beginning-position))
   (insert (format "%s\n\n" jira-pending-request-placeholder))
