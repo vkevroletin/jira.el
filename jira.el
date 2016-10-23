@@ -30,6 +30,11 @@
   :group 'jira
   :type 'string)
 
+(defcustom jira-authenticate t
+  "Whether to send authentication info from .authinfo.gpg to server"
+  :group 'jira
+  :type 'boolean)
+
 (defcustom jira-my-issues-jql
   "assignee=currentUser() and resolution=unresolved and \"Landing Zone\" is not empty"
   "JQL used by *my-issues* functions"
@@ -77,6 +82,9 @@ retrieving of data."
           (jira--at xs (jira--at-helper x data))
         (jira--at-helper x data)))))
 
+(defun jira--filter-nils (&rest data)
+  (-filter #'identity data))
+
 (defun jira--truncate-url-path (x)
   (-if-let (((from . to)) (s-matched-positions-all "[^:\/]\/" x))
       (s-left (+ 1 from) x)
@@ -89,8 +97,10 @@ retrieving of data."
   (format "%s/browse/%s" jira-base-url key))
 
 (defun jira--headers ()
-  `(("Authntication" . ,(concat "Basic " (jira--read-secret)))
-    ("Content-type" . "application/json")))
+  (jira--filter-nils
+   (when jira-authenticate
+     `("Authntication" . ,(concat "Basic " (jira--read-secret))))
+   '("Content-type" . "application/json")))
 
 (defun jira--encode-get-params (params)
   "Expecting params to be alist"
