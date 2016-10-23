@@ -41,6 +41,13 @@
   :group 'jira
   :type 'string)
 
+(defcustom jira-quick-filters
+  `(("My lz issues" . ,jira-my-issues-jql)
+    ("My issues" . "assignee=currentUser() and resolution=unresolved"))
+  "Quick means they are saved within emacs and require no fetch tile"
+  :group 'jira
+  :type 'alist)
+
 (defcustom jira-pending-request-placeholder "{jira-pending-request}"
   "This string is inserted into buffer till end of asynchronous
 retrieving of data."
@@ -245,20 +252,19 @@ buffer."
     (forward-line 1)
     (delete-region beg (point))))
 
-(defun jira-insert-my-issues-here ()
-  "This function could be described using pseudo code:
-fetch-my-issues => insert each issue into current pos. Tricky
+(defun jira--insert-jiras (filter-signal)
+  "This function could be described using pseudo code: signal
+provides issues => insert each issue into current pos. Tricky
 moment is asynchronous nature of data retrieval. Instead of
 blocking we remember where to place result. We mark this place in
 buffer by magic string. Later magic string is replaced by result.
-User can remove magic string to cancel operation"
-  (interactive)
+User can remove magic string to cancel operation."
   (goto-char (line-beginning-position))
   (insert (format "%s\n\n" jira-pending-request-placeholder))
   (forward-line -2)
   (let ((buffer (current-buffer))
         (placeholder-position (point)))
-    (funcall (jira--my-issues-signal)
+    (funcall filter-signal
              :subscribe-next
              (lambda (xs)
                (with-current-buffer buffer
@@ -273,6 +279,23 @@ User can remove magic string to cancel operation"
                      (jira--kill-line))
                    (message "Done")))
                (goto-char placeholder-position)))))
+
+(defun jira--filters-helm-sources ()
+  (jira--filter-nils
+   (when jira-quick-filters
+     (helm-build-sync-source "Quick filters"
+       :candidates (--map (format "%s | %s" (car it) (cdr it)) jira-quick-filters)
+       :fuzzy-match t))))
+
+(defun jira-insert-filter-result-here ()
+  (interactive)
+  (-if-let (choice (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
+      (let ((jql (-last-item (s-split " | " choice))))
+        (jira--insert-jiras (jira-jql-filter-signal jql)))))
+
+(defun jira-insert-my-issues-here ()
+  (interactive)
+  (jira--insert-jiras (jira--my-issues-signal)))
 
 (provide 'jira)
 
