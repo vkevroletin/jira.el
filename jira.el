@@ -52,6 +52,16 @@ retrieving of data."
   :group 'jira
   :type 'string)
 
+(defun jira--domain ()
+  (nth 1 (s-split "://" jira-base-url)))
+
+(defun jira--read-secret ()
+  (let* ((auth (nth 0 (auth-source-search :host (jira--domain)
+                                          :requires '(user secret))))
+         (pass (funcall (plist-get auth :secret)))
+         (user (plist-get auth :user)))
+    (base64-encode-string (concat user ":" pass))))
+
 (defun jira--at-helper (key data)
   (if (numberp key)
       (if (>= (length data) key)
@@ -74,7 +84,7 @@ retrieving of data."
   (format "%s/browse/%s" jira-base-url key))
 
 (defun jira--headers ()
-  `(("Authntication" . ,(concat "Basic " (user-config/get-jira-secret)))
+  `(("Authntication" . ,(concat "Basic " (jira--read-secret)))
     ("Content-type" . "application/json")))
 
 (defun jira--encode-get-params (params)
@@ -119,6 +129,10 @@ retrieving of data."
       (funcall callback res))))
 
 (defun jira--retrieve-common-debug (method mini-url callback &optional params)
+  method   ;; hide unused parameter warning
+  mini-url
+  callback
+  params
   (funcall callback
            (json-read-from-string (f-read-text jira--debug-read-response-from-file))))
 
