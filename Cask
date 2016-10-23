@@ -16,4 +16,5 @@
 (development
  (depends-on "ecukes")
  (depends-on "el-mock")
- (depends-on "ert-runner"))
+ (depends-on "ert-runner")
+ (depends-on "undercover"))

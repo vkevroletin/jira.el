@@ -1,8 +1,5 @@
 ;;; -*- lexical-binding: t -*-
 
-(require 'ert)
-(require 'jira)
-
 (ert-deftest internal-domain ()
 (-each '(("https://jira.com"      . "jira.com")
           ("http://jira.com"       . "jira.com")
