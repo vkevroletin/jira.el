@@ -48,6 +48,15 @@
   :group 'jira
   :type 'alist)
 
+(defcustom jira-issue-files
+  '()
+  "List of entities where jira.el searches for existing
+issues (in addition to current file) to prevent duplicates. Each
+item could be file of directory. If item is directory then it is
+same as adding all *.org files within this directory."
+  :group 'jira
+  :type 'list)
+
 (defcustom jira-pending-request-placeholder "{jira-pending-request}"
   "This string is inserted into buffer till end of asynchronous
 retrieving of data."
@@ -243,6 +252,18 @@ buffer."
         (when (re-search-forward pattern '() t) ;; suppress error
           t)))))
 
+(defun jira--get-flat-issue-files ()
+  (--filter (s-ends-with? ".org" it)
+   (-flatten
+    (--map (if (f-directory? it) (f-files it) it) jira-issue-files))))
+
+(defun jira--find-issue-in-buffer-and-files (issue buffer)
+  (or
+   (jira--find-issue-in-buffer issue buffer)
+   (--any (with-current-buffer (find-file-noselect it)
+            (jira--find-issue-in-buffer issue (current-buffer)))
+          (jira--get-flat-issue-files))))
+
 (defun jira--my-issues-signal ()
   (jira-jql-filter-signal jira-my-issues-jql))
 
@@ -273,7 +294,7 @@ User can remove magic string to cancel operation."
                    (when (looking-at (regexp-quote jira-pending-request-placeholder))
                      (jira--kill-line)
                      (--each xs
-                       (unless (jira--find-issue-in-buffer it (current-buffer))
+                       (unless (jira--find-issue-in-buffer-and-files it (current-buffer))
                          (insert (jira--issue-to-org-task it))
                          (insert "\n\n")))
                      (jira--kill-line))
