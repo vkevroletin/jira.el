@@ -5,7 +5,8 @@
 ;; Author: Vasiliy Kevroletin <kevroletin@gmail.com>
 ;; Maintainer: Vasiliy Kevroletin <kevroletin@gmail.com>
 ;; Keywords: jira
-;; Package-Version: 0
+;; Package-Version: 20161023.2358
+;; Package-X-Original-Version: 0
 
 ;; This file is not part of GNU Emacs.
 ;; This file is public domain software. Do what you want.
@@ -301,8 +302,8 @@ blocking we remember where to place result. We mark this place in
 buffer by magic string. Later magic string is replaced by result.
 User can remove magic string to cancel operation."
   (goto-char (line-beginning-position))
-  (insert (format "%s\n\n" jira-pending-request-placeholder))
-  (forward-line -2)
+  (insert (format "%s\n" jira-pending-request-placeholder))
+  (forward-line -1)
   (let ((buffer (current-buffer))
         (placeholder-position (point)))
     (funcall filter-signal
