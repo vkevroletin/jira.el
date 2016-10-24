@@ -214,10 +214,13 @@ buffer."
                 params))))
 
 (defun jira-jql-filter-signal (jql)
-  "Sequence of mini-issues"
+  "Sequence of mini-issues. Currently can not fetch result in
+several requests so it returns only first 'page' which is
+requested to be of size 1500"
   (lifted:map
    #'jira--minify-jira-list
-   (jira-post-signal "search" `(("jql" . ,jql)))))
+   (jira-post-signal "search" `(("jql" . ,jql)
+                                ("maxResults" . 1500)))))
 
 (defun jira--minify-jira-list (xs)
   (-map #'jira--minify-jira (jira--at 'issues xs)))
