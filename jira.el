@@ -319,15 +319,14 @@ User can remove magic string to cancel operation."
   (jira--filter-nils
    (when jira-quick-filters
      (helm-build-sync-source "Quick filters"
-       :candidates (--map (format "%s | %s" (car it) (cdr it)) jira-quick-filters)
+       :candidates jira-quick-filters
        :fuzzy-match t))))
 
 (defun jira-insert-filter-result-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
-  (-if-let (choice (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
-      (let ((jql (-last-item (s-split " | " choice))))
-        (jira--insert-jiras (jira-jql-filter-signal jql) (consp arg)))))
+  (-if-let (jql (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
+      (jira--insert-jiras (jira-jql-filter-signal jql) (consp arg))))
 
 (defun jira-insert-my-issues-here (&optional arg)
   "Prefix argument disables filtering."
