@@ -236,9 +236,9 @@ requested to be of size 1500"
    (cons 'summary     (jira--at '(fields summary) x))))
 
 (defun jira--issue-caption (issue)
-  (format "[[%s][%s]]"
-          (jira--issue-browse-url (jira--at 'key issue))
-          (s-replace-all '(("[" . "{") ("]" . "}")) (jira--at 'summary issue))))
+  (let ((key     (jira--at 'key issue))
+        (summary (jira--at 'summary issue)))
+    (format "[[%s][%s]] %s" (jira--issue-browse-url key) key summary)))
 
 (defun jira--issue-to-org-text (x)
   (s-join
