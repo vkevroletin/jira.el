@@ -5,7 +5,8 @@
 ;; Author: Vasiliy Kevroletin <kevroletin@gmail.com>
 ;; Maintainer: Vasiliy Kevroletin <kevroletin@gmail.com>
 ;; Keywords: jira
-;; Package-Version: 0
+;; Package-Version: 20161023.2358
+;; Package-X-Original-Version: 0
 
 ;; This file is not part of GNU Emacs.
 ;; This file is public domain software. Do what you want.
@@ -217,7 +218,8 @@ buffer."
   "Sequence of mini-issues"
   (lifted:map
    #'jira--minify-jira-list
-   (jira-post-signal "search" `(("jql" . ,jql)))))
+   (jira-post-signal "search" `(("jql" . ,jql)
+                                ("maxResults" . 1500)))))
 
 (defun jira--minify-jira-list (xs)
   (-map #'jira--minify-jira (jira--at 'issues xs)))
@@ -233,9 +235,9 @@ buffer."
    (cons 'summary     (jira--at '(fields summary) x))))
 
 (defun jira--issue-caption (issue)
-  (format "[[%s][%s]]"
-          (jira--issue-browse-url (jira--at 'key issue))
-          (s-replace-all '(("[" . "{") ("]" . "}")) (jira--at 'summary issue))))
+  (let ((key     (jira--at 'key issue))
+        (summary (jira--at 'summary issue)))
+    (format "[[%s][%s]] %s" (jira--issue-browse-url key) key summary)))
 
 (defun jira--issue-to-org-text (x)
   (s-join
@@ -296,8 +298,8 @@ blocking we remember where to place result. We mark this place in
 buffer by magic string. Later magic string is replaced by result.
 User can remove magic string to cancel operation."
   (goto-char (line-beginning-position))
-  (insert (format "%s\n\n" jira-pending-request-placeholder))
-  (forward-line -2)
+  (insert (format "%s\n" jira-pending-request-placeholder))
+  (forward-line -1)
   (let ((buffer (current-buffer))
         (placeholder-position (point)))
     (funcall filter-signal
