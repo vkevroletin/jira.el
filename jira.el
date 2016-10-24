@@ -275,14 +275,16 @@ requested to be of size 1500"
     (forward-line 1)
     (delete-region beg (point))))
 
-(defun jira--insert-jiras-main-part (issues-list)
+(defun jira--insert-jiras-main-part (issues-list &optional force)
   "Inserts text representation at point in current buffer.
-Returns count of inserted and filtered tasks as cons."
+Returns count of inserted and filtered tasks as cons. force
+parameter disables filtering."
   (let ((good-cnt 0)
         (bad-cnt  0))
     (-each issues-list
         (lambda (issue)
-          (if (jira--find-issue-in-buffer-and-files issue (current-buffer))
+          (if (and (not force)
+                   (jira--find-issue-in-buffer-and-files issue (current-buffer)))
               (incf bad-cnt)
             (when (> good-cnt 0) (insert "\n"))
             (incf good-cnt)
@@ -291,7 +293,7 @@ Returns count of inserted and filtered tasks as cons."
              good-cnt
              (if (> bad-cnt 0) (format "; skipped %s" bad-cnt) ""))))
 
-(defun jira--insert-jiras (filter-signal)
+(defun jira--insert-jiras (filter-signal &optional force)
   "This function could be described using pseudo code: signal
 provides issues => insert each issue into current pos. Tricky
 moment is asynchronous nature of data retrieval. Instead of
@@ -310,7 +312,7 @@ User can remove magic string to cancel operation."
                  (save-excursion
                    (goto-char placeholder-position)
                    (jira--kill-line)
-                   (jira--insert-jiras-main-part issues)))
+                   (jira--insert-jiras-main-part issues force)))
                (goto-char placeholder-position)))))
 
 (defun jira--filters-helm-sources ()
@@ -320,15 +322,17 @@ User can remove magic string to cancel operation."
        :candidates (--map (format "%s | %s" (car it) (cdr it)) jira-quick-filters)
        :fuzzy-match t))))
 
-(defun jira-insert-filter-result-here ()
-  (interactive)
+(defun jira-insert-filter-result-here (&optional arg)
+  "Prefix argument disables filtering."
+  (interactive "P")
   (-if-let (choice (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
       (let ((jql (-last-item (s-split " | " choice))))
-        (jira--insert-jiras (jira-jql-filter-signal jql)))))
+        (jira--insert-jiras (jira-jql-filter-signal jql) (consp arg)))))
 
-(defun jira-insert-my-issues-here ()
-  (interactive)
-  (jira--insert-jiras (jira--my-issues-signal)))
+(defun jira-insert-my-issues-here (&optional arg)
+  "Prefix argument disables filtering."
+  (interactive "P")
+  (jira--insert-jiras (jira--my-issues-signal) (consp arg)))
 
 (provide 'jira)
 
