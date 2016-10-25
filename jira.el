@@ -326,7 +326,7 @@ User can remove magic string to cancel operation."
        :candidates jira-quick-filters
        :fuzzy-match t))))
 
-(defun jira--read-single-replacement (hole)
+(defun jira--ask-single-replacement (hole)
   (cons (format "{%s}" hole)
         (helm-comp-read (format "%s: " hole)
                         jira--templates-history
@@ -336,17 +336,20 @@ User can remove magic string to cancel operation."
   "Replaces whildcards like {name} with strings obtained
 interactively from user"
   (let* ((holes (-uniq (-flatten (-map '-last-item (s-match-strings-all "{\\([^}]+\\)}" str)))))
-         (replacements (-map #'jira--read-single-replacement holes)))
+         (replacements (-map #'jira--ask-single-replacement holes)))
     (if replacements
         (s-replace-all replacements str)
       str)))
 
+(defun jira--ask-jql-filter ()
+  (-when-let (jql-template (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
+      (jira--populate-template jql-template)))
+
 (defun jira-insert-filter-result-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
-  (-if-let (jql-template (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
-      (-if-let (jql (jira--populate-template jql-template))
-          (jira--insert-jiras (jira-jql-filter-signal jql) (consp arg)))))
+  (--when-let (jira--ask-jql-filter)
+    (jira--insert-jiras (jira-jql-filter-signal it) (consp arg))))
 
 (defun jira-insert-my-issues-here (&optional arg)
   "Prefix argument disables filtering."
