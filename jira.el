@@ -351,6 +351,14 @@ interactively from user"
   (--when-let (jira--ask-jql-filter)
     (jira--insert-jiras (jira-jql-filter-signal it) (consp arg))))
 
+(defun jira-show-filter-result ()
+  (interactive)
+  (--when-let (jira--ask-jql-filter)
+    (with-current-buffer (get-buffer-create (generate-new-buffer-name "*Jql result*"))
+      (jira--insert-jiras (jira-jql-filter-signal it) t)
+      (org-mode)
+      (switch-to-buffer (current-buffer)))))
+
 (defun jira-insert-my-issues-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
