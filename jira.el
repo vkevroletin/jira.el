@@ -41,8 +41,10 @@
   :type 'string)
 
 (defcustom jira-quick-filters
-  `(("My lz issues" . ,jira-my-issues-jql)
-    ("My issues" . "assignee=currentUser() and resolution=unresolved"))
+  `(("My landing zone issues"    . ,jira-my-issues-jql)
+    ("My current issues"         . "assignee=currentUser() and resolution=unresolved")
+    ("My issues in progress"     . "assignee=currentUser() and status=\"In progress\"")
+    ("My issues + {text search}" . "assignee=currentUser() and text ~ \"{text}\""))
   "Quick means they are saved within emacs and require no fetch tile"
   :group 'jira
   :type 'alist)
@@ -71,6 +73,8 @@ retrieving of data."
   "Path to file"
   :group 'jira
   :type 'string)
+
+(defvar jira--templates-history '())
 
 (defun jira--domain ()
   (-first-item (s-split "/" (-last-item (s-split "://" jira-base-url)))))
@@ -322,11 +326,27 @@ User can remove magic string to cancel operation."
        :candidates jira-quick-filters
        :fuzzy-match t))))
 
+(defun jira--read-single-replacement (hole)
+  (cons (format "{%s}" hole)
+        (helm-comp-read (format "%s: " hole)
+                        jira--templates-history
+                        :input-history 'jira--templates-history)))
+
+(defun jira--populate-template (str)
+  "Replaces whildcards like {name} with strings obtained
+interactively from user"
+  (let* ((holes (-uniq (-flatten (-map '-last-item (s-match-strings-all "{\\([^}]+\\)}" str)))))
+         (replacements (-map #'jira--read-single-replacement holes)))
+    (if replacements
+        (s-replace-all replacements str)
+      str)))
+
 (defun jira-insert-filter-result-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
-  (-if-let (jql (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
-      (jira--insert-jiras (jira-jql-filter-signal jql) (consp arg))))
+  (-if-let (jql-template (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
+      (-if-let (jql (jira--populate-template jql-template))
+          (jira--insert-jiras (jira-jql-filter-signal jql) (consp arg)))))
 
 (defun jira-insert-my-issues-here (&optional arg)
   "Prefix argument disables filtering."
