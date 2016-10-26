@@ -244,11 +244,11 @@ requested to be of size 1500"
         (summary (jira--at 'summary issue)))
     (format "[[%s][%s]] %s" (jira--issue-browse-url key) key summary)))
 
-(defun jira--issue-to-org-text (x)
+(defun jira--issue-to-org-text (x nesting-level)
   (s-join
    "\n"
    (list
-    (concat "* MAYBE " (jira--issue-caption x)))))
+    (concat (make-string nesting-level ?*) " " (jira--issue-caption x)))))
 
 (defun jira--find-issue-in-buffer (issue buffer)
   (let ((pattern (format "*+ \\w+ %s" (regexp-quote (jira--issue-caption issue)))))
@@ -279,11 +279,19 @@ requested to be of size 1500"
     (forward-line 1)
     (delete-region beg (point))))
 
+(defun jira--find-heading-nesting-level ()
+  (save-match-data
+    (save-excursion
+      (--if-let (re-search-backward "^\\(\*+\\) " '() t)
+          (length (match-string 1))
+        0))))
+
 (defun jira--insert-jiras-main-part (issues-list &optional force)
   "Inserts text representation at point in current buffer.
 Returns count of inserted and filtered tasks as cons. force
 parameter disables filtering."
-  (let ((good-cnt 0)
+  (let ((nesting-level (1+ (jira--find-heading-nesting-level)))
+        (good-cnt 0)
         (bad-cnt  0))
     (-each issues-list
         (lambda (issue)
@@ -292,7 +300,7 @@ parameter disables filtering."
               (incf bad-cnt)
             (when (> good-cnt 0) (insert "\n"))
             (incf good-cnt)
-            (insert (jira--issue-to-org-text issue)))))
+            (insert (jira--issue-to-org-text issue nesting-level)))))
     (message "Done (inserted %s%s)"
              good-cnt
              (if (> bad-cnt 0) (format "; skipped %s" bad-cnt) ""))))
