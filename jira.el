@@ -24,22 +24,26 @@
 (require 'lifted)
 (require 'restclient)
 
+;;;###autoload
 (defcustom jira-base-url "https://jira.com"
   "Url like https://jira.com"
   :group 'jira
   :type 'string)
 
+;;;###autoload
 (defcustom jira-authenticate t
   "Whether to send authentication info from .authinfo.gpg to server"
   :group 'jira
   :type 'boolean)
 
+;;;###autoload
 (defcustom jira-my-issues-jql
   "assignee=currentUser() and resolution=unresolved and \"Landing Zone\" is not empty"
   "JQL used by *my-issues* functions"
   :group 'jira
   :type 'string)
 
+;;;###autoload
 (defcustom jira-quick-filters
   `(("My landing zone issues"    . ,jira-my-issues-jql)
     ("My current issues"         . "assignee=currentUser() and resolution=unresolved")
@@ -49,6 +53,7 @@
   :group 'jira
   :type 'alist)
 
+;;;###autoload
 (defcustom jira-issue-files
   '()
   "List of entities where jira.el searches for existing
@@ -58,6 +63,7 @@ same as adding all *.org files within this directory."
   :group 'jira
   :type 'list)
 
+;;;###autoload
 (defcustom jira-pending-request-placeholder "{jira-pending-request}"
   "This string is inserted into buffer till end of asynchronous
 retrieving of data."
@@ -364,12 +370,14 @@ interactively from user"
     (funcall (jira-jql-filter-signal jql)
              :map (lambda (x) (-take 1 x)))))
 
+;;;###autoload
 (defun jira-insert-filter-result-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
   (--when-let (jira--ask-jql-filter)
     (jira--insert-jiras (jira-jql-filter-signal it) (consp arg))))
 
+;;;###autoload
 (defun jira-show-filter-result ()
   (interactive)
   (--when-let (jira--ask-jql-filter)
@@ -378,11 +386,13 @@ interactively from user"
       (org-mode)
       (switch-to-buffer (current-buffer)))))
 
+;;;###autoload
 (defun jira-insert-my-issues-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
   (jira--insert-jiras (jira--my-issues-signal) (consp arg)))
 
+;;;###autoload
 (defun jira-yank-issue ()
   "Looks into kill ring and decides if is contains jira ticket name,
 link or simply some text. Request corresponding issue and inserts
