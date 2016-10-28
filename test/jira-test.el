@@ -36,7 +36,7 @@
              ("CT-123  " . "CT-123")
              ("https://bugreports.qt.io/browse/QTJIRA-40" . "QTJIRA-40")
              ("bugreports.qt.io/browse/QTJIRA-40" . "QTJIRA-40")
-             ("Hello World" . '()) )
+             ("Hello World" . ()) )
     (let ((in  (car it))
           (out (cdr it)))
       (should (equal (jira--issue-key-from-text in) out)))))
