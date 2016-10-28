@@ -131,6 +131,9 @@ retrieving of data."
   "Expecting params to be alist"
   (s-join "&" (--map (format "%s=%s" (car it) (cdr it)) params)))
 
+(defun jira--quote-sql-string (x)
+  (s-replace "\"" "\\\"" x))
+
 (defun jira--rest-url-with-get-params (mini-url &optional params)
   (if params
       (let ((sep (if (equal "/" (s-right 1 mini-url)) "?" "/?")))
@@ -348,7 +351,8 @@ User can remove magic string to cancel operation."
   (cons (format "{%s}" hole)
         (helm-comp-read (format "%s: " hole)
                         jira--templates-history
-                        :input-history 'jira--templates-history)))
+                        :input-history 'jira--templates-history
+                        :action #'jira--quote-sql-string)))
 
 (defun jira--populate-template (str)
   "Replaces whildcards like {name} with strings obtained
@@ -366,7 +370,7 @@ interactively from user"
 (defun jira--convert-text-to-issue-signal (text)
   (let ((jql (--if-let (jira--issue-key-from-text text)
                  (format "key = %s" it)
-               (format "summary ~ \"%s\"" text))))
+               (format "summary ~ \"%s\"" (jira--quote-sql-string text)))))
     (funcall (jira-jql-filter-signal jql)
              :map (lambda (x) (-take 1 x)))))
 
