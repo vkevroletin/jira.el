@@ -30,3 +30,13 @@
     (should (equal (jira--rest-url "issues") "https://jira.com/rest/api/latest/issues")))
   (let ((jira-base-url "https://jira.com/a/b/c"))
     (should (equal (jira--rest-url "issues") "https://jira.com/rest/api/latest/issues"))))
+
+(ert-deftest internal-issue-key-from-text ()
+  (--each '( ("CT-123"   . "CT-123")
+             ("CT-123  " . "CT-123")
+             ("https://bugreports.qt.io/browse/QTJIRA-40" . "QTJIRA-40")
+             ("bugreports.qt.io/browse/QTJIRA-40" . "QTJIRA-40")
+             ("Hello World" . '()) )
+    (let ((in  (car it))
+          (out (cdr it)))
+      (should (equal (jira--issue-key-from-text in) out)))))

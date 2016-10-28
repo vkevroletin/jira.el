@@ -244,11 +244,15 @@ requested to be of size 1500"
         (summary (jira--at 'summary issue)))
     (format "[[%s][%s]] %s" (jira--issue-browse-url key) key summary)))
 
+(defun jira--issue-to-org-caption (x nesting-level)
+  (format "%s %s" (make-string nesting-level ?*) (jira--issue-caption x)))
+
 (defun jira--issue-to-org-text (x nesting-level)
-  (s-join
-   "\n"
-   (list
-    (concat (make-string nesting-level ?*) " " (jira--issue-caption x)))))
+  (jira--issue-to-org-caption x nesting-level))
+
+(defun jira--issue-key-from-text (text)
+  (--when-let (s-match "\\([[:upper:]]+-[[:digit:]]+\\)[[:space:]]*$" text)
+    (-last-item it)))
 
 (defun jira--find-issue-in-buffer (issue buffer)
   (let ((pattern (format "*+ \\w+ %s" (regexp-quote (jira--issue-caption issue)))))
@@ -353,6 +357,13 @@ interactively from user"
   (-when-let (jql-template (helm :sources (jira--filters-helm-sources) :buffer "*jira-filters*"))
       (jira--populate-template jql-template)))
 
+(defun jira--convert-text-to-issue-signal (text)
+  (let ((jql (--if-let (jira--issue-key-from-text text)
+                 (format "key = %s" it)
+               (format "summary ~ \"%s\"" text))))
+    (funcall (jira-jql-filter-signal jql)
+             :map (lambda (x) (-take 1 x)))))
+
 (defun jira-insert-filter-result-here (&optional arg)
   "Prefix argument disables filtering."
   (interactive "P")
@@ -371,6 +382,19 @@ interactively from user"
   "Prefix argument disables filtering."
   (interactive "P")
   (jira--insert-jiras (jira--my-issues-signal) (consp arg)))
+
+(defun jira-yank-issue ()
+  "Looks into kill ring and decides if is contains jira ticket name,
+link or simply some text. Request corresponding issue and inserts
+in current position. Algorithm for analysis of kill ring is
+simple: line which end with [letters]-[numbers] is link or ticket
+name, in both cases we can request issues with that key.
+Otherwise - this is text and it is part of summary. In case of
+multiline input it looks only at first line."
+  (interactive)
+  (-when-let (first-killed-line
+              (-first (lambda (x) (not (s-blank? x))) (s-split "\n" (car kill-ring))))
+    (jira--insert-jiras (jira--convert-text-to-issue-signal first-killed-line))))
 
 (provide 'jira)
 
