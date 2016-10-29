@@ -10,7 +10,7 @@ Search for jira issues from Emacs. Quickly insert issues into text files.
 
 ## Configuration
 
-``jira.el`` uses ``url`` package to communicate via rest api and reads password
+``jiraffe.el`` uses ``url`` package to communicate via rest api and reads password
 from ``.authinfo.gpg``. There are few configuration parameter which you can
 tweak, see ``jira.el`` so details.
 
