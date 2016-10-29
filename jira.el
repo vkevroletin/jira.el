@@ -17,11 +17,12 @@
 ;;; Code:
 ;;
 
-(require 'request)
-(require 'json)
-(require 'f)
 (require 'dash)
+(require 'f)
+(require 'helm)
+(require 'json)
 (require 'lifted)
+(require 'request)
 (require 'restclient)
 
 ;;;###autoload
