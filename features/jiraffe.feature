@@ -13,7 +13,7 @@ Feature: Insert filter result
   Scenario: Non empty result
     Given I start an action chain
       And I press "M-x"
-      And I type "jira-show-filter-result"
+      And I type "jiraffe-show-filter-result"
       Then I press "RET"
       And I type "test single issue"
       And I press "RET"

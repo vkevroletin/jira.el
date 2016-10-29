@@ -11,7 +11,7 @@
 
 (add-to-list 'load-path jira-root-path)
 
-(require 'jira)
+(require 'jiraffe)
 (require 'espuds)
 (require 'ert)
 

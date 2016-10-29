@@ -10,16 +10,16 @@
 
 (Given "^base-url points to \"\\(.+\\)\"$"
   (lambda (url)
-    (setq jira-base-url url)))
+    (setq jiraffe-base-url url)))
 
 (And "^\"\\(.+\\)\" added to quick-filters as \"\\(.+\\)\"$"
   (lambda (jql name)
-    (add-to-list 'jira-quick-filters
+    (add-to-list 'jiraffe-quick-filters
                  (cons name jql))))
 
 (And "authentication is disabled$"
   (lambda ()
-    (setq jira-authenticate '())))
+    (setq jiraffe-authenticate '())))
 
 (Then "^Eventually I should see \"\\(.+\\)\" in buffer$"
   (lambda (issue-key done-token)

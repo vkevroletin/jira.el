@@ -13,9 +13,9 @@ unit:
 	${CASK} exec ert-runner
 
 compile:
-	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile jira.el
+	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile jiraffe.el
 
 clean-elc:
-	rm -f jira.elc
+	rm -f jiraffe.elc
 
 .PHONY: all test docs unit

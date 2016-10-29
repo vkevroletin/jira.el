@@ -1,8 +1,8 @@
 (source gnu)
 (source melpa)
 
-(package "jira" "0.0" "Jira integration")
-(package-file "jira.el")
+(package "jiraffe" "0.0" "Search jira issues from Eamcs")
+(package-file "jiraffe.el")
 
 (depends-on "dash")
 (depends-on "deferred")
