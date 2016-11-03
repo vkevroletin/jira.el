@@ -5,7 +5,8 @@
 ;; Author: Vasiliy Kevroletin <kevroletin@gmail.com>
 ;; Maintainer: Vasiliy Kevroletin <kevroletin@gmail.com>
 ;; Keywords: jira
-;; Package-Version: 0
+;; Package-Version: 20161029.1309
+;; Package-X-Original-Version: 0
 
 ;; This file is not part of GNU Emacs.
 ;; This file is public domain software. Do what you want.
@@ -167,6 +168,7 @@ retrieving of data."
       (goto-char (point-min))
       (let ((first-line (buffer-substring-no-properties (line-beginning-position)
                                                         (line-end-position))))
+        (switch-to-buffer (current-buffer))
         (signal (car err) (list first-line))))
     (let ((res (jiraffe--parse-http-response-to-json (current-buffer))))
       (jiraffe--maybe-dump-responce res)
@@ -180,18 +182,39 @@ retrieving of data."
   (funcall callback
            (json-read-from-string (f-read-text jiraffe--debug-read-response-from-file))))
 
-(defun jiraffe--retrieve-common-normal (method mini-url callback &optional params)
-  (let ((url-request-method method)
-        (url-request-extra-headers (jiraffe--headers))
-        (url-request-data '())
-        (full-url '()))
-    (when (and (equal method "POST") params)
-      (setq url-request-data (json-encode params)))
-    (if (equal method "GET")
-        (setq full-url (jiraffe--rest-url-with-get-params mini-url params))
-      (setq full-url (jiraffe--rest-url mini-url)))
+(defun jiraffee--with-url-headers (headers callback)
+  (let (url-request-extra-headers '())
+    (restclient-restore-header-variables)
 
-    (url-retrieve full-url (jiraffe--add-parsing-to-callback callback))))
+    (dolist (header (jiraffe--headers))
+      (let* ((mapped (assoc-string (downcase (car header))
+                                   '(("from" . url-personal-mail-address)
+                                     ("accept-encoding" . url-mime-encoding-string)
+                                     ("accept-charset" . url-mime-charset-string)
+                                     ("accept-language" . url-mime-language-string)
+                                     ("accept" . url-mime-accept-string)))))
+
+        (if mapped
+            (set (cdr mapped) (cdr header))
+          (setq url-request-extra-headers (cons header url-request-extra-headers)))))
+
+    (funcall callback)))
+
+(defun jiraffe--retrieve-common-normal (method mini-url callback &optional params)
+  (jiraffee--with-url-headers
+   (jiraffe--headers)
+   (lambda ()
+     (let ((url-request-method method)
+           (url-request-data '())
+           (full-url '()))
+
+       (when (and (equal method "POST") params)
+         (setq url-request-data (json-encode params)))
+       (if (equal method "GET")
+           (setq full-url (jiraffe--rest-url-with-get-params mini-url params))
+         (setq full-url (jiraffe--rest-url mini-url)))
+
+       (url-retrieve full-url (jiraffe--add-parsing-to-callback callback))))))
 
 (defun jiraffe--retrieve-common (method mini-url callback &optional params)
   (if jiraffe--debug-read-response-from-file
@@ -205,8 +228,7 @@ elisp alists and vectors. Gives no guarantees about about saving
 excursion and current buffer."
   (jiraffe--retrieve-common "GET" mini-url callback params))
 
-(defun jiraffe-get-signal (mini-url &optional params)
-  (lifted:signal
+(defun jiraffe-get-signal (mini-url &optional params) (lifted:signal
    (lambda (subscriber)
      (jiraffe-get mini-url
                (lambda (x) (funcall subscriber :send-next x))
