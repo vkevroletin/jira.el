@@ -125,7 +125,7 @@ retrieving of data."
 (defun jiraffe--headers ()
   (jiraffe--filter-nils
    (when jiraffe-authenticate
-     `("Authntication" . ,(concat "Basic " (jiraffe--read-secret))))
+     `("Authentication" . ,(concat "Basic " (jiraffe--read-secret))))
    '("Content-type" . "application/json")))
 
 (defun jiraffe--encode-get-params (params)
